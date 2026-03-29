@@ -1,0 +1,4 @@
+node_modules/
+inscriptions.json
+*.db
+.env
