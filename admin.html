@@ -651,6 +651,7 @@
           <input type="text" id="search-input" placeholder="Rechercher par nom, téléphone ou ticket..." oninput="filterGuests()">
         </div>
         <button class="btn-outline" onclick="loadGuestList()"><span id="refresh-icon">↻</span> Rafraîchir</button>
+        <a class="btn-outline" href="/api?action=export" download style="text-decoration:none;">⬇ Exporter Excel</a>
       </div>
 
       <div id="guest-list-loading">
@@ -684,7 +685,7 @@
     // CONFIGURATION
     // =============================================
     // ⚠️ REMPLACE PAR TON URL Google Apps Script
-    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwx-0RuGz6lyD3Q1ffdoXs_2_rBRieQzU3oqahm6jeoqS2d29YU_rbwgJ0mi-n3okrU/exec';
+    const GOOGLE_SCRIPT_URL = '/api';
 
     // ⚠️ CHANGE CES IDENTIFIANTS
     const ADMIN_USERNAME = 'admin';
@@ -827,13 +828,11 @@
     // PROCESS SCAN — calls Google Apps Script
     // =============================================
     async function processTicketScan(ticketId, name, phone) {
-      if (GOOGLE_SCRIPT_URL === 'VOTRE_URL_GOOGLE_APPS_SCRIPT_ICI') {
-        showScanResult('error', 'Non configuré', 'L\'URL Google Apps Script n\'est pas encore configurée.', null);
-        return;
-      }
-
       try {
-        const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=scan&ticket_id=${encodeURIComponent(ticketId)}`);
+        const controller1 = new AbortController();
+        const timeout1 = setTimeout(() => controller1.abort(), 5000);
+        const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=scan&ticket_id=${encodeURIComponent(ticketId)}`, { signal: controller1.signal });
+        clearTimeout(timeout1);
         const result = await response.json();
 
         if (result.status === 'success') {
@@ -891,13 +890,11 @@
       loading.style.display = 'block';
       tableWrap.style.display = 'none';
 
-      if (GOOGLE_SCRIPT_URL === 'VOTRE_URL_GOOGLE_APPS_SCRIPT_ICI') {
-        loading.innerHTML = '<p style="color:var(--red);">URL Google Apps Script non configurée.</p>';
-        return;
-      }
-
       try {
-        const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=list`);
+        const controller2 = new AbortController();
+        const timeout2 = setTimeout(() => controller2.abort(), 5000);
+        const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=list`, { signal: controller2.signal });
+        clearTimeout(timeout2);
         const result = await response.json();
 
         if (result.status === 'success') {
