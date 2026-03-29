@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — JMC Soirée Cinéma 2026</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Cormorant+Garamond:wght@300;400;600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --navy-deep: #0a1628;
+      --navy: #0f1f3d;
+      --navy-mid: #162a50;
+      --navy-light: #1d3461;
+      --gold: #c9a84c;
+      --gold-light: #e0c878;
+      --gold-bright: #f0d98c;
+      --gold-dim: #8a7235;
+      --cream: #f5efe0;
+      --white: #ffffff;
+      --white-10: rgba(255,255,255,0.1);
+      --white-20: rgba(255,255,255,0.2);
+      --white-50: rgba(255,255,255,0.5);
+      --white-70: rgba(255,255,255,0.7);
+      --white-90: rgba(255,255,255,0.9);
+      --gold-glow: rgba(201,168,76,0.3);
+      --green: #4cc978;
+      --green-dim: rgba(76,201,120,0.15);
+      --red: #c94c4c;
+      --red-dim: rgba(201,76,76,0.15);
+      --orange: #c9964c;
+      --orange-dim: rgba(201,150,76,0.15);
+      --font-display: 'Playfair Display', Georgia, serif;
+      --font-body: 'Outfit', 'Segoe UI', sans-serif;
+      --font-accent: 'Cormorant Garamond', Georgia, serif;
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { font-size: 16px; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--navy-deep);
+      color: var(--white-90);
+      line-height: 1.6;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ============================================
+       LOGIN SCREEN
+       ============================================ */
+    .login-screen {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 400px;
+      background: rgba(22,42,80,0.4);
+      border: 1px solid var(--white-10);
+      padding: 3rem 2.5rem;
+      position: relative;
+    }
+
+    .login-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    }
+
+    .login-logo {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .login-logo h1 {
+      font-family: var(--font-display);
+      font-size: 1.8rem;
+      color: var(--gold);
+      letter-spacing: 3px;
+    }
+
+    .login-logo p {
+      font-family: var(--font-accent);
+      font-size: 0.85rem;
+      color: var(--white-50);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-top: 0.3rem;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-family: var(--font-accent);
+      font-size: 0.85rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--gold-dim);
+      margin-bottom: 0.5rem;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 0.8rem 1rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--white-20);
+      border-radius: 2px;
+      color: var(--white-90);
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      transition: border-color 0.3s, background 0.3s;
+      outline: none;
+    }
+
+    .form-group input:focus {
+      border-color: var(--gold);
+      background: rgba(201,168,76,0.05);
+    }
+
+    .btn-gold {
+      display: inline-block;
+      padding: 0.9rem 2.5rem;
+      background: linear-gradient(135deg, var(--gold), var(--gold-light));
+      color: var(--navy-deep);
+      font-family: var(--font-body);
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      text-decoration: none;
+      border: none;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      width: 100%;
+      text-align: center;
+    }
+
+    .btn-gold:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 25px var(--gold-glow);
+    }
+
+    .btn-gold:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .btn-outline {
+      display: inline-block;
+      padding: 0.7rem 1.5rem;
+      background: transparent;
+      color: var(--gold);
+      font-family: var(--font-body);
+      font-size: 0.8rem;
+      font-weight: 500;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      border: 1px solid var(--gold-dim);
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-outline:hover { background: var(--gold); color: var(--navy-deep); }
+
+    .btn-danger {
+      background: transparent;
+      color: var(--red);
+      border: 1px solid var(--red);
+      padding: 0.7rem 1.5rem;
+      font-family: var(--font-body);
+      font-size: 0.8rem;
+      font-weight: 500;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-danger:hover { background: var(--red); color: var(--white); }
+
+    #login-error {
+      color: var(--red);
+      text-align: center;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+    }
+
+    /* ============================================
+       ADMIN DASHBOARD
+       ============================================ */
+    .admin-dashboard {
+      display: none;
+      min-height: 100vh;
+    }
+
+    .admin-header {
+      padding: 1rem 2rem;
+      background: rgba(10,22,40,0.95);
+      border-bottom: 1px solid var(--white-10);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .admin-header-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .admin-header h1 {
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      color: var(--gold);
+      letter-spacing: 2px;
+    }
+
+    .admin-header .badge {
+      font-size: 0.7rem;
+      padding: 0.2rem 0.6rem;
+      background: var(--green-dim);
+      color: var(--green);
+      border-radius: 2px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    /* TABS */
+    .admin-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--white-10);
+      padding: 0 2rem;
+      background: rgba(15,31,61,0.5);
+    }
+
+    .tab-btn {
+      padding: 1rem 1.5rem;
+      background: none;
+      border: none;
+      color: var(--white-50);
+      font-family: var(--font-body);
+      font-size: 0.85rem;
+      font-weight: 500;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.3s;
+    }
+
+    .tab-btn:hover { color: var(--white-70); }
+    .tab-btn.active {
+      color: var(--gold);
+      border-bottom-color: var(--gold);
+    }
+
+    .tab-content {
+      display: none;
+      padding: 2rem;
+    }
+
+    .tab-content.active { display: block; }
+
+    /* ============================================
+       SCANNER TAB
+       ============================================ */
+    .scanner-area {
+      max-width: 600px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .scanner-controls {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    #scanner-view {
+      width: 100%;
+      max-width: 450px;
+      margin: 0 auto 1.5rem;
+      border-radius: 2px;
+      overflow: hidden;
+      border: 1px solid var(--white-10);
+    }
+
+    #scanner-view video {
+      width: 100%;
+      display: block;
+    }
+
+    #scanner-status {
+      font-size: 0.9rem;
+      color: var(--white-50);
+      margin-top: 1rem;
+    }
+
+    /* Scan result overlay */
+    .scan-result {
+      padding: 2rem;
+      border-radius: 2px;
+      margin: 1.5rem auto;
+      max-width: 450px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .scan-result.success {
+      background: var(--green-dim);
+      border: 1px solid rgba(76,201,120,0.3);
+    }
+
+    .scan-result.error {
+      background: var(--red-dim);
+      border: 1px solid rgba(201,76,76,0.3);
+    }
+
+    .scan-result.warning {
+      background: var(--orange-dim);
+      border: 1px solid rgba(201,150,76,0.3);
+    }
+
+    .scan-result-icon {
+      font-size: 3rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .scan-result h3 {
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .scan-result.success h3 { color: var(--green); }
+    .scan-result.error h3 { color: var(--red); }
+    .scan-result.warning h3 { color: var(--orange); }
+
+    .scan-result p {
+      color: var(--white-70);
+      font-size: 0.9rem;
+    }
+
+    .scan-result .detail-line {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.3rem 0;
+      border-bottom: 1px solid var(--white-10);
+    }
+
+    .scan-result .detail-label {
+      color: var(--white-50);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .scan-result .detail-value {
+      color: var(--cream);
+      font-weight: 500;
+    }
+
+    /* ============================================
+       GUEST LIST TAB
+       ============================================ */
+    .stats-bar {
+      display: flex;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .stat-card {
+      flex: 1;
+      min-width: 140px;
+      background: rgba(22,42,80,0.4);
+      border: 1px solid var(--white-10);
+      padding: 1.2rem;
+      border-radius: 2px;
+      text-align: center;
+    }
+
+    .stat-number {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--gold-light);
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--white-50);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-top: 0.2rem;
+    }
+
+    .stat-card.scanned .stat-number { color: var(--green); }
+    .stat-card.pending .stat-number { color: var(--orange); }
+
+    /* Search */
+    .search-bar {
+      margin-bottom: 1.5rem;
+    }
+
+    .search-bar input {
+      width: 100%;
+      max-width: 400px;
+      padding: 0.8rem 1rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--white-20);
+      border-radius: 2px;
+      color: var(--white-90);
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+
+    .search-bar input:focus { border-color: var(--gold); }
+
+    /* Table */
+    .guest-table-wrap {
+      overflow-x: auto;
+    }
+
+    .guest-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    .guest-table th {
+      text-align: left;
+      padding: 0.8rem 1rem;
+      font-family: var(--font-accent);
+      font-size: 0.8rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--gold-dim);
+      border-bottom: 1px solid var(--white-20);
+      white-space: nowrap;
+    }
+
+    .guest-table td {
+      padding: 0.7rem 1rem;
+      border-bottom: 1px solid var(--white-10);
+      color: var(--white-70);
+      white-space: nowrap;
+    }
+
+    .guest-table tr:hover td {
+      background: rgba(201,168,76,0.03);
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 0.2rem 0.7rem;
+      border-radius: 2px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .status-badge.scanned {
+      background: var(--green-dim);
+      color: var(--green);
+    }
+
+    .status-badge.pending {
+      background: var(--orange-dim);
+      color: var(--orange);
+    }
+
+    #guest-list-loading {
+      text-align: center;
+      padding: 3rem;
+      color: var(--white-50);
+    }
+
+    /* ============================================
+       MANUAL SCAN INPUT
+       ============================================ */
+    .manual-scan {
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--white-10);
+    }
+
+    .manual-scan-row {
+      display: flex;
+      gap: 0.8rem;
+      max-width: 450px;
+      margin: 0.8rem auto 0;
+    }
+
+    .manual-scan-row input {
+      flex: 1;
+      padding: 0.7rem 1rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--white-20);
+      border-radius: 2px;
+      color: var(--white-90);
+      font-family: monospace;
+      font-size: 0.9rem;
+      outline: none;
+    }
+
+    .manual-scan-row input:focus { border-color: var(--gold); }
+
+    /* ============================================
+       SPINNER
+       ============================================ */
+    .spinner {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--gold-dim);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      vertical-align: middle;
+      margin-right: 0.5rem;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ============================================
+       RESPONSIVE
+       ============================================ */
+    @media (max-width: 768px) {
+      .admin-tabs { padding: 0 1rem; }
+      .tab-btn { padding: 0.8rem 1rem; font-size: 0.75rem; }
+      .tab-content { padding: 1.5rem 1rem; }
+      .login-card { padding: 2rem 1.5rem; }
+      .admin-header { padding: 1rem; }
+      .stats-bar { gap: 0.8rem; }
+      .stat-card { min-width: 100px; padding: 0.8rem; }
+      .stat-number { font-size: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ========== LOGIN SCREEN ========== -->
+  <div class="login-screen" id="login-screen">
+    <div class="login-card">
+      <div class="login-logo">
+        <h1>JMC</h1>
+        <p>Administration</p>
+      </div>
+      <div class="form-group">
+        <label for="username">Nom d'utilisateur</label>
+        <input type="text" id="username" placeholder="admin">
+      </div>
+      <div class="form-group">
+        <label for="password">Mot de passe</label>
+        <input type="password" id="password" placeholder="••••••••">
+      </div>
+      <button class="btn-gold" id="loginBtn" onclick="doLogin()">Connexion</button>
+      <p id="login-error"></p>
+    </div>
+  </div>
+
+  <!-- ========== ADMIN DASHBOARD ========== -->
+  <div class="admin-dashboard" id="admin-dashboard">
+    
+    <!-- Header -->
+    <div class="admin-header">
+      <div class="admin-header-left">
+        <h1>JMC Admin</h1>
+        <span class="badge">Soirée Cinéma 2026</span>
+      </div>
+      <div>
+        <a href="index.html" class="btn-outline" style="margin-right:0.5rem;">Retour au site</a>
+        <button class="btn-danger" onclick="doLogout()">Déconnexion</button>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="admin-tabs">
+      <button class="tab-btn active" data-tab="scanner" onclick="switchTab('scanner')">Scanner QR</button>
+      <button class="tab-btn" data-tab="guests" onclick="switchTab('guests')">Liste des Inscrits</button>
+    </div>
+
+    <!-- TAB: SCANNER -->
+    <div class="tab-content active" id="tab-scanner">
+      <div class="scanner-area">
+        <h2 style="font-family:var(--font-display);color:var(--cream);margin-bottom:0.5rem;">Scanner les Tickets</h2>
+        <p style="color:var(--white-50);font-size:0.9rem;margin-bottom:1.5rem;">Scannez le QR code du ticket à l'entrée pour valider la présence.</p>
+        
+        <div class="scanner-controls">
+          <button class="btn-outline" id="start-scan-btn" onclick="startScanner()">Démarrer le Scanner</button>
+          <button class="btn-danger" id="stop-scan-btn" onclick="stopScanner()" style="display:none;">Arrêter</button>
+        </div>
+
+        <div id="scanner-view"></div>
+        <p id="scanner-status">Le scanner est prêt.</p>
+
+        <!-- Scan Result -->
+        <div id="scan-result"></div>
+
+        <!-- Manual Input -->
+        <div class="manual-scan">
+          <p style="color:var(--white-50);font-size:0.85rem;text-align:center;">Ou entrez le Ticket ID manuellement :</p>
+          <div class="manual-scan-row">
+            <input type="text" id="manual-ticket-id" placeholder="JMC-CIN-XXXXXX">
+            <button class="btn-outline" onclick="manualScan()">Valider</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: GUEST LIST -->
+    <div class="tab-content" id="tab-guests">
+      <div class="stats-bar" id="stats-bar">
+        <div class="stat-card">
+          <div class="stat-number" id="stat-total">—</div>
+          <div class="stat-label">Total Inscrits</div>
+        </div>
+        <div class="stat-card scanned">
+          <div class="stat-number" id="stat-scanned">—</div>
+          <div class="stat-label">Scannés</div>
+        </div>
+        <div class="stat-card pending">
+          <div class="stat-number" id="stat-pending">—</div>
+          <div class="stat-label">En attente</div>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1rem;">
+        <div class="search-bar">
+          <input type="text" id="search-input" placeholder="Rechercher par nom, téléphone ou ticket..." oninput="filterGuests()">
+        </div>
+        <button class="btn-outline" onclick="loadGuestList()"><span id="refresh-icon">↻</span> Rafraîchir</button>
+      </div>
+
+      <div id="guest-list-loading">
+        <span class="spinner"></span> Chargement de la liste...
+      </div>
+
+      <div class="guest-table-wrap" id="guest-table-wrap" style="display:none;">
+        <table class="guest-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Nom</th>
+              <th>Sexe</th>
+              <th>Téléphone</th>
+              <th>Église</th>
+              <th>Ticket ID</th>
+              <th>Statut</th>
+            </tr>
+          </thead>
+          <tbody id="guest-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR Scanner Library -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+  <script>
+    // =============================================
+    // CONFIGURATION
+    // =============================================
+    // ⚠️ REMPLACE PAR TON URL Google Apps Script
+    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwx-0RuGz6lyD3Q1ffdoXs_2_rBRieQzU3oqahm6jeoqS2d29YU_rbwgJ0mi-n3okrU/exec';
+
+    // ⚠️ CHANGE CES IDENTIFIANTS
+    const ADMIN_USERNAME = 'admin';
+    const ADMIN_PASSWORD = 'jmc2026';
+
+    // =============================================
+    // LOGIN
+    // =============================================
+    // Check session
+    if (sessionStorage.getItem('jmc-admin-auth') === 'true') {
+      showDashboard();
+    }
+
+    function doLogin() {
+      const user = document.getElementById('username').value.trim();
+      const pass = document.getElementById('password').value;
+      const errorEl = document.getElementById('login-error');
+
+      if (user === ADMIN_USERNAME && pass === ADMIN_PASSWORD) {
+        sessionStorage.setItem('jmc-admin-auth', 'true');
+        showDashboard();
+      } else {
+        errorEl.textContent = 'Identifiants incorrects.';
+        document.getElementById('password').value = '';
+      }
+    }
+
+    // Enter key to login
+    document.getElementById('password').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') doLogin();
+    });
+
+    function doLogout() {
+      sessionStorage.removeItem('jmc-admin-auth');
+      location.reload();
+    }
+
+    function showDashboard() {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('admin-dashboard').style.display = 'block';
+      loadGuestList();
+    }
+
+    // =============================================
+    // TABS
+    // =============================================
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tabName);
+      });
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.toggle('active', content.id === `tab-${tabName}`);
+      });
+      if (tabName === 'guests') loadGuestList();
+    }
+
+    // =============================================
+    // QR SCANNER
+    // =============================================
+    let html5QrCode = null;
+    let isScanning = false;
+    let lastScannedId = null; // prevent duplicate rapid scans
+
+    function startScanner() {
+      if (isScanning) return;
+
+      const scannerView = document.getElementById('scanner-view');
+      document.getElementById('start-scan-btn').style.display = 'none';
+      document.getElementById('stop-scan-btn').style.display = 'inline-block';
+      document.getElementById('scanner-status').textContent = 'Initialisation de la caméra...';
+      document.getElementById('scan-result').innerHTML = '';
+
+      html5QrCode = new Html5Qrcode("scanner-view");
+
+      html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        onScanSuccess,
+        onScanFailure
+      ).then(() => {
+        isScanning = true;
+        document.getElementById('scanner-status').textContent = 'Scanner actif — présentez un QR code.';
+      }).catch(err => {
+        console.error('Erreur caméra:', err);
+        document.getElementById('scanner-status').textContent = 'Erreur: impossible d\'accéder à la caméra.';
+        document.getElementById('start-scan-btn').style.display = 'inline-block';
+        document.getElementById('stop-scan-btn').style.display = 'none';
+      });
+    }
+
+    function stopScanner() {
+      if (html5QrCode && isScanning) {
+        html5QrCode.stop().then(() => {
+          html5QrCode.clear();
+          isScanning = false;
+          document.getElementById('start-scan-btn').style.display = 'inline-block';
+          document.getElementById('stop-scan-btn').style.display = 'none';
+          document.getElementById('scanner-status').textContent = 'Scanner arrêté.';
+        });
+      }
+    }
+
+    function onScanFailure(error) {
+      // Silent — scanning continuously
+    }
+
+    async function onScanSuccess(decodedText) {
+      try {
+        const data = JSON.parse(decodedText);
+        const ticketId = data.id;
+
+        // Prevent double-scan within 3 seconds
+        if (ticketId === lastScannedId) return;
+        lastScannedId = ticketId;
+        setTimeout(() => { lastScannedId = null; }, 3000);
+
+        document.getElementById('scanner-status').textContent = 'Vérification en cours...';
+        await processTicketScan(ticketId, data.name, data.phone);
+
+      } catch (err) {
+        showScanResult('error', 'QR Code Invalide', 'Ce QR code ne correspond pas à un ticket valide.', null);
+      }
+    }
+
+    async function manualScan() {
+      const ticketId = document.getElementById('manual-ticket-id').value.trim().toUpperCase();
+      if (!ticketId) return;
+
+      document.getElementById('scan-result').innerHTML = '<p style="text-align:center;color:var(--white-50);"><span class="spinner"></span> Vérification...</p>';
+      await processTicketScan(ticketId, null, null);
+      document.getElementById('manual-ticket-id').value = '';
+    }
+
+    // Enter key for manual scan
+    document.getElementById('manual-ticket-id').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') manualScan();
+    });
+
+    // =============================================
+    // PROCESS SCAN — calls Google Apps Script
+    // =============================================
+    async function processTicketScan(ticketId, name, phone) {
+      if (GOOGLE_SCRIPT_URL === 'VOTRE_URL_GOOGLE_APPS_SCRIPT_ICI') {
+        showScanResult('error', 'Non configuré', 'L\'URL Google Apps Script n\'est pas encore configurée.', null);
+        return;
+      }
+
+      try {
+        const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=scan&ticket_id=${encodeURIComponent(ticketId)}`);
+        const result = await response.json();
+
+        if (result.status === 'success') {
+          showScanResult('success', 'Bienvenue !', null, result.data);
+        } else if (result.status === 'already_scanned') {
+          showScanResult('warning', 'Déjà scanné', `Ce ticket a déjà été scanné à ${result.data.scanned_at || 'une heure inconnue'}.`, result.data);
+        } else if (result.status === 'not_found') {
+          showScanResult('error', 'Ticket Introuvable', `Aucun inscrit trouvé avec le ticket ${ticketId}.`, null);
+        } else {
+          showScanResult('error', 'Erreur', result.message || 'Une erreur est survenue.', null);
+        }
+      } catch (err) {
+        console.error('Scan error:', err);
+        showScanResult('error', 'Erreur de connexion', 'Impossible de contacter le serveur. Vérifiez votre connexion.', null);
+      }
+    }
+
+    function showScanResult(type, title, message, data) {
+      const icons = { success: '✅', error: '❌', warning: '⚠️' };
+      let html = `
+        <div class="scan-result ${type}">
+          <div class="scan-result-icon">${icons[type]}</div>
+          <h3>${title}</h3>
+      `;
+
+      if (data) {
+        html += `
+          <div style="margin-top:1rem;">
+            <div class="detail-line"><span class="detail-label">Nom</span><span class="detail-value">${data.full_name || '—'}</span></div>
+            <div class="detail-line"><span class="detail-label">Téléphone</span><span class="detail-value">${data.phone || '—'}</span></div>
+            <div class="detail-line"><span class="detail-label">Église</span><span class="detail-value">${data.church || '—'}</span></div>
+            <div class="detail-line"><span class="detail-label">Ticket</span><span class="detail-value">${data.ticket_id || '—'}</span></div>
+          </div>
+        `;
+      }
+
+      if (message) {
+        html += `<p style="margin-top:0.8rem;">${message}</p>`;
+      }
+
+      html += '</div>';
+      document.getElementById('scan-result').innerHTML = html;
+      document.getElementById('scanner-status').textContent = 'Scanner actif — présentez un QR code.';
+    }
+
+    // =============================================
+    // GUEST LIST — load from Google Sheets
+    // =============================================
+    let allGuests = [];
+
+    async function loadGuestList() {
+      const loading = document.getElementById('guest-list-loading');
+      const tableWrap = document.getElementById('guest-table-wrap');
+
+      loading.style.display = 'block';
+      tableWrap.style.display = 'none';
+
+      if (GOOGLE_SCRIPT_URL === 'VOTRE_URL_GOOGLE_APPS_SCRIPT_ICI') {
+        loading.innerHTML = '<p style="color:var(--red);">URL Google Apps Script non configurée.</p>';
+        return;
+      }
+
+      try {
+        const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=list`);
+        const result = await response.json();
+
+        if (result.status === 'success') {
+          allGuests = result.data || [];
+          renderGuestList(allGuests);
+          updateStats(allGuests);
+          loading.style.display = 'none';
+          tableWrap.style.display = 'block';
+        } else {
+          loading.innerHTML = `<p style="color:var(--red);">Erreur: ${result.message}</p>`;
+        }
+      } catch (err) {
+        console.error('Load error:', err);
+        loading.innerHTML = '<p style="color:var(--red);">Erreur de connexion au serveur.</p>';
+      }
+    }
+
+    function renderGuestList(guests) {
+      const tbody = document.getElementById('guest-table-body');
+
+      if (guests.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--white-50);padding:2rem;">Aucun inscrit trouvé.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = guests.map((g, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td style="color:var(--cream);font-weight:500;">${g.full_name || '—'}</td>
+          <td>${g.gender || '—'}</td>
+          <td>${g.phone || '—'}</td>
+          <td>${g.church || '—'}</td>
+          <td style="font-family:monospace;font-size:0.8rem;">${g.ticket_id || '—'}</td>
+          <td>
+            <span class="status-badge ${g.scan_status === 'Scanné' ? 'scanned' : 'pending'}">
+              ${g.scan_status === 'Scanné' ? 'Scanné' : 'En attente'}
+            </span>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function updateStats(guests) {
+      const total = guests.length;
+      const scanned = guests.filter(g => g.scan_status === 'Scanné').length;
+      const pending = total - scanned;
+
+      document.getElementById('stat-total').textContent = total;
+      document.getElementById('stat-scanned').textContent = scanned;
+      document.getElementById('stat-pending').textContent = pending;
+    }
+
+    function filterGuests() {
+      const query = document.getElementById('search-input').value.toLowerCase();
+      const filtered = allGuests.filter(g =>
+        (g.full_name || '').toLowerCase().includes(query) ||
+        (g.phone || '').toLowerCase().includes(query) ||
+        (g.ticket_id || '').toLowerCase().includes(query) ||
+        (g.church || '').toLowerCase().includes(query)
+      );
+      renderGuestList(filtered);
+    }
+  </script>
+
+</body>
+</html>
