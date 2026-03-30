@@ -734,7 +734,7 @@
   </div>
 
   <!-- QR Scanner Library -->
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
   <script>
     // =============================================
@@ -849,30 +849,35 @@
     }
 
     async function onScanSuccess(decodedText) {
+      // Prevent double-scan within 4 seconds
+      if (decodedText === lastScannedId) return;
+      lastScannedId = decodedText;
+      setTimeout(() => { lastScannedId = null; }, 4000);
+
+      let ticketId = null;
       try {
         const data = JSON.parse(decodedText);
-        const ticketId = data.id;
-
-        // Prevent double-scan within 3 seconds
-        if (ticketId === lastScannedId) return;
-        lastScannedId = ticketId;
-        setTimeout(() => { lastScannedId = null; }, 3000);
-
-        document.getElementById('scanner-status').textContent = 'Vérification en cours...';
-        await processTicketScan(ticketId, data.name, data.phone);
-
-      } catch (err) {
-        showScanResult('error', 'QR Code Invalide', 'Ce QR code ne correspond pas à un ticket valide.', null);
+        ticketId = data.id || null;
+      } catch (e) {
+        // QR code non-JSON — essayer comme texte brut
+        ticketId = decodedText.trim();
       }
+
+      if (!ticketId) {
+        showScanResult('error', 'QR Code Invalide', 'Ce QR code ne correspond pas à un ticket valide.', null);
+        return;
+      }
+
+      document.getElementById('scanner-status').textContent = 'Vérification en cours...';
+      await processTicketScan(ticketId);
     }
 
     async function manualScan() {
       const ticketId = document.getElementById('manual-ticket-id').value.trim().toUpperCase();
       if (!ticketId) return;
-
-      document.getElementById('scan-result').innerHTML = '<p style="text-align:center;color:var(--white-50);"><span class="spinner"></span> Vérification...</p>';
-      await processTicketScan(ticketId, null, null);
       document.getElementById('manual-ticket-id').value = '';
+      document.getElementById('scanner-status').textContent = 'Vérification en cours...';
+      await processTicketScan(ticketId);
     }
 
     // Enter key for manual scan
@@ -883,7 +888,7 @@
     // =============================================
     // PROCESS SCAN — calls Google Apps Script
     // =============================================
-    async function processTicketScan(ticketId, name, phone) {
+    async function processTicketScan(ticketId) {
       try {
         const controller1 = new AbortController();
         const timeout1 = setTimeout(() => controller1.abort(), 20000);
@@ -892,53 +897,59 @@
         const result = await response.json();
 
         if (result.status === 'success') {
-          showScanResult('success', 'Bienvenue !', null, result.data);
+          showScanResult('success', '✅ Bienvenue !', 'Ticket validé avec succès.', result.data);
         } else if (result.status === 'already_scanned') {
-          showScanResult('warning', 'Déjà scanné', `Ce ticket a déjà été scanné à ${result.data.scanned_at || 'une heure inconnue'}.`, result.data);
+          showScanResult('warning', '⚠️ Déjà scanné', `Ce ticket a déjà été scanné à ${result.data.scanned_at || 'une heure inconnue'}.`, result.data);
         } else if (result.status === 'not_found') {
-          showScanResult('error', 'Ticket Introuvable', `Aucun inscrit trouvé avec le ticket ${ticketId}.`, null);
+          showScanResult('error', '❌ Ticket Introuvable', `Aucun inscrit trouvé avec ce ticket.`, null);
         } else {
-          showScanResult('error', 'Erreur', result.message || 'Une erreur est survenue.', null);
+          showScanResult('error', '❌ Erreur', result.message || 'Une erreur est survenue.', null);
         }
       } catch (err) {
-        console.error('Scan error:', err);
-        showScanResult('error', 'Erreur de connexion', 'Impossible de contacter le serveur. Vérifiez votre connexion.', null);
+        showScanResult('error', '❌ Erreur de connexion', 'Impossible de contacter le serveur. Vérifiez votre connexion internet.', null);
       }
+      document.getElementById('scanner-status').textContent = 'Scanner actif — présentez un QR code.';
     }
 
     function showScanResult(type, title, message, data) {
-      const icons = { success: '✅', error: '❌', warning: '⚠️' };
-      let html = `
-        <div class="scan-result ${type}">
-          <div class="scan-result-icon">${icons[type]}</div>
-          <h3>${title}</h3>
-      `;
+      try {
+        const colors = { success: '#0d2b1a', error: '#2b0d0d', warning: '#2b1e0d' };
+        const borders = { success: '#4cc978', error: '#e74c3c', warning: '#e0a050' };
+        const bg = colors[type] || colors.error;
+        const border = borders[type] || borders.error;
 
-      if (data) {
-        html += `
-          <div style="margin-top:1rem;">
-            <div class="detail-line"><span class="detail-label">Nom</span><span class="detail-value">${data.full_name || '—'}</span></div>
-            <div class="detail-line"><span class="detail-label">Téléphone</span><span class="detail-value">${data.phone || '—'}</span></div>
-            <div class="detail-line"><span class="detail-label">Église</span><span class="detail-value">${data.church || '—'}</span></div>
-            <div class="detail-line"><span class="detail-label">Ticket</span><span class="detail-value">${data.ticket_id || '—'}</span></div>
-          </div>
-        `;
-      }
+        let details = '';
+        if (data) {
+          details = `
+            <div style="margin:1rem 0;text-align:left;">
+              <div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.1)"><span style="color:rgba(255,255,255,0.5);font-size:0.8rem;">NOM</span><span>${data.full_name || '—'}</span></div>
+              <div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.1)"><span style="color:rgba(255,255,255,0.5);font-size:0.8rem;">TÉLÉPHONE</span><span>${data.phone || '—'}</span></div>
+              <div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.1)"><span style="color:rgba(255,255,255,0.5);font-size:0.8rem;">ÉGLISE</span><span>${data.church || '—'}</span></div>
+              <div style="display:flex;justify-content:space-between;padding:0.4rem 0;"><span style="color:rgba(255,255,255,0.5);font-size:0.8rem;">TICKET</span><span style="font-family:monospace;font-size:0.85rem;">${data.ticket_id || '—'}</span></div>
+            </div>`;
+        }
 
-      if (message) {
-        html += `<p style="margin-top:0.8rem;">${message}</p>`;
-      }
+        const msgHtml = message ? `<p style="color:rgba(255,255,255,0.7);font-size:0.9rem;margin:0.5rem 0;">${message}</p>` : '';
 
-      html += `<button class="scan-close-btn" onclick="closeScanOverlay()">Fermer</button>`;
-      html += '</div>';
+        const html = `
+          <div style="background:${bg};border:2px solid ${border};border-radius:16px;padding:2rem;width:100%;max-width:420px;text-align:center;color:#fff;">
+            <div style="font-size:3.5rem;margin-bottom:0.5rem;">${type === 'success' ? '✅' : type === 'warning' ? '⚠️' : '❌'}</div>
+            <h3 style="font-size:1.5rem;margin-bottom:0.5rem;color:${border};">${title}</h3>
+            ${msgHtml}
+            ${details}
+            <button onclick="closeScanOverlay()" style="margin-top:1rem;padding:0.6rem 2rem;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:8px;cursor:pointer;font-size:1rem;width:100%;">Fermer</button>
+          </div>`;
 
-      const overlay = document.getElementById('scan-overlay');
-      document.getElementById('scan-result').innerHTML = html;
-      overlay.style.display = 'flex';
+        const overlay = document.getElementById('scan-overlay');
+        document.getElementById('scan-result').innerHTML = html;
+        overlay.style.cssText = 'display:flex !important; position:fixed; top:0; left:0; right:0; bottom:0; z-index:9999; background:rgba(0,0,0,0.9); align-items:center; justify-content:center; padding:1rem;';
 
-      // Fermeture automatique après 6 secondes pour succès/déjà scanné
-      if (type === 'success' || type === 'warning') {
-        setTimeout(() => closeScanOverlay(), 6000);
+        if (type === 'success' || type === 'warning') {
+          setTimeout(() => closeScanOverlay(), 6000);
+        }
+      } catch(e) {
+        // Fallback absolu si tout échoue
+        alert(title + (message ? '\n' + message : '') + (data ? '\n' + (data.full_name || '') : ''));
       }
       document.getElementById('scanner-status').textContent = 'Scanner actif — présentez un QR code.';
     }
