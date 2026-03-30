@@ -632,22 +632,29 @@
     <div class="tab-content active" id="tab-scanner">
       <div class="scanner-area">
         <h2 style="font-family:var(--font-display);color:var(--cream);margin-bottom:0.5rem;">Scanner les Tickets</h2>
-        <p style="color:var(--white-50);font-size:0.9rem;margin-bottom:1.5rem;">Scannez le QR code du ticket à l'entrée pour valider la présence.</p>
-        
-        <div class="scanner-controls">
-          <button class="btn-outline" id="start-scan-btn" onclick="startScanner()">Démarrer le Scanner</button>
-          <button class="btn-danger" id="stop-scan-btn" onclick="stopScanner()" style="display:none;">Arrêter</button>
+
+        <!-- ÉTAT 1 : Prêt -->
+        <div id="state-ready">
+          <p style="color:var(--white-50);font-size:0.9rem;margin-bottom:1.5rem;">Appuyez sur le bouton pour activer la caméra.</p>
+          <button class="btn-gold" style="width:100%;padding:1rem;font-size:1.1rem;" onclick="startScanner()">📷 Démarrer le Scanner</button>
         </div>
 
-        <div id="scanner-view"></div>
-        <p id="scanner-status">Le scanner est prêt.</p>
+        <!-- ÉTAT 2 : Scanning -->
+        <div id="state-scanning" style="display:none;">
+          <video id="scan-video" autoplay playsinline muted style="width:100%;border-radius:12px;max-height:300px;object-fit:cover;"></video>
+          <canvas id="scan-canvas" style="display:none;"></canvas>
+          <p style="color:var(--gold);text-align:center;margin:0.75rem 0;">🔍 Pointez vers un QR code...</p>
+          <button class="btn-danger" style="width:100%;" onclick="stopScanner()">Arrêter</button>
+        </div>
 
+        <!-- ÉTAT 3 : Résultat -->
+        <div id="state-result" style="display:none;"></div>
 
-        <!-- Manual Input -->
-        <div class="manual-scan">
+        <!-- Saisie manuelle -->
+        <div class="manual-scan" style="margin-top:1.5rem;">
           <p style="color:var(--white-50);font-size:0.85rem;text-align:center;">Ou entrez le Ticket ID manuellement :</p>
           <div class="manual-scan-row">
-            <input type="text" id="manual-ticket-id" placeholder="JMC-CIN-XXXXXX">
+            <input type="text" id="manual-ticket-id" placeholder="JMC-XXXXXXXX" style="text-transform:uppercase;">
             <button class="btn-outline" onclick="manualScan()">Valider</button>
           </div>
         </div>
@@ -705,11 +712,6 @@
     </div>
   </div>
 
-  <!-- OVERLAY — Résultat du scan -->
-  <div id="scan-overlay">
-    <div id="scan-result"></div>
-  </div>
-
   <!-- MODAL — Ajouter manuellement -->
   <div id="add-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:2000;display:none;align-items:center;justify-content:center;">
     <div style="background:var(--navy-mid);border:1px solid var(--gold-dim);border-radius:12px;padding:2rem;width:90%;max-width:480px;">
@@ -734,7 +736,7 @@
   </div>
 
   <!-- QR Scanner Library -->
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 
   <script>
     // =============================================
@@ -799,174 +801,125 @@
     }
 
     // =============================================
-    // QR SCANNER
+    // QR SCANNER — jsQR + getUserMedia
     // =============================================
-    let html5QrCode = null;
-    let isScanning = false;
-    let lastScannedId = null; // prevent duplicate rapid scans
+    let scanStream = null;
+    let scanLoop = null;
+    let lastScanned = null;
 
-    function startScanner() {
-      if (isScanning) return;
+    function showState(name) {
+      document.getElementById('state-ready').style.display    = name === 'ready'    ? 'block' : 'none';
+      document.getElementById('state-scanning').style.display = name === 'scanning' ? 'block' : 'none';
+      document.getElementById('state-result').style.display   = name === 'result'   ? 'block' : 'none';
+    }
 
-      const scannerView = document.getElementById('scanner-view');
-      document.getElementById('start-scan-btn').style.display = 'none';
-      document.getElementById('stop-scan-btn').style.display = 'inline-block';
-      document.getElementById('scanner-status').textContent = 'Initialisation de la caméra...';
-      document.getElementById('scan-result').innerHTML = '';
-
-      html5QrCode = new Html5Qrcode("scanner-view");
-
-      html5QrCode.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        onScanSuccess,
-        onScanFailure
-      ).then(() => {
-        isScanning = true;
-        document.getElementById('scanner-status').textContent = 'Scanner actif — présentez un QR code.';
-      }).catch(err => {
-        console.error('Erreur caméra:', err);
-        document.getElementById('scanner-status').textContent = 'Erreur: impossible d\'accéder à la caméra.';
-        document.getElementById('start-scan-btn').style.display = 'inline-block';
-        document.getElementById('stop-scan-btn').style.display = 'none';
-      });
+    async function startScanner() {
+      showState('scanning');
+      try {
+        scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        const video = document.getElementById('scan-video');
+        video.srcObject = scanStream;
+        video.play();
+        video.onloadedmetadata = () => { scanFrames(); };
+      } catch (err) {
+        alert('Impossible d\'accéder à la caméra : ' + err.message);
+        showState('ready');
+      }
     }
 
     function stopScanner() {
-      if (html5QrCode && isScanning) {
-        html5QrCode.stop().then(() => {
-          html5QrCode.clear();
-          isScanning = false;
-          document.getElementById('start-scan-btn').style.display = 'inline-block';
-          document.getElementById('stop-scan-btn').style.display = 'none';
-          document.getElementById('scanner-status').textContent = 'Scanner arrêté.';
-        });
+      if (scanLoop) { cancelAnimationFrame(scanLoop); scanLoop = null; }
+      if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+      showState('ready');
+    }
+
+    function scanFrames() {
+      const video  = document.getElementById('scan-video');
+      const canvas = document.getElementById('scan-canvas');
+      if (!scanStream) return;
+
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvas.width  = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+        if (code && code.data && code.data !== lastScanned) {
+          lastScanned = code.data;
+          setTimeout(() => { lastScanned = null; }, 5000);
+          stopScanner();
+          handleQRCode(code.data);
+          return;
+        }
       }
+      scanLoop = requestAnimationFrame(scanFrames);
     }
 
-    function onScanFailure(error) {
-      // Silent — scanning continuously
-    }
-
-    async function onScanSuccess(decodedText) {
-      // Prevent double-scan within 4 seconds
-      if (decodedText === lastScannedId) return;
-      lastScannedId = decodedText;
-      setTimeout(() => { lastScannedId = null; }, 4000);
-
-      let ticketId = null;
+    function handleQRCode(raw) {
+      let ticketId = raw.trim();
       try {
-        const data = JSON.parse(decodedText);
-        ticketId = data.id || null;
-      } catch (e) {
-        // QR code non-JSON — essayer comme texte brut
-        ticketId = decodedText.trim();
-      }
-
-      if (!ticketId) {
-        showScanResult('error', 'QR Code Invalide', 'Ce QR code ne correspond pas à un ticket valide.', null);
-        return;
-      }
-
-      document.getElementById('scanner-status').textContent = 'Vérification en cours...';
-      await processTicketScan(ticketId);
+        const obj = JSON.parse(raw);
+        if (obj.id) ticketId = obj.id;
+      } catch (e) {}
+      verifyTicket(ticketId);
     }
 
     async function manualScan() {
       const ticketId = document.getElementById('manual-ticket-id').value.trim().toUpperCase();
       if (!ticketId) return;
       document.getElementById('manual-ticket-id').value = '';
-      document.getElementById('scanner-status').textContent = 'Vérification en cours...';
-      await processTicketScan(ticketId);
+      verifyTicket(ticketId);
     }
 
-    // Enter key for manual scan
     document.getElementById('manual-ticket-id').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') manualScan();
     });
 
     // =============================================
-    // PROCESS SCAN — calls Google Apps Script
+    // VÉRIFICATION TICKET
     // =============================================
-    async function processTicketScan(ticketId) {
-      try {
-        const controller1 = new AbortController();
-        const timeout1 = setTimeout(() => controller1.abort(), 20000);
-        const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=scan&ticket_id=${encodeURIComponent(ticketId)}`, { signal: controller1.signal });
-        clearTimeout(timeout1);
-        const result = await response.json();
+    async function verifyTicket(ticketId) {
+      showState('result');
+      document.getElementById('state-result').innerHTML = `
+        <div style="text-align:center;padding:2rem;">
+          <div style="font-size:2rem;">⏳</div>
+          <p style="color:#fff;margin-top:0.5rem;">Vérification en cours...</p>
+        </div>`;
 
-        if (result.status === 'success') {
-          showScanResult('success', '✅ Bienvenue !', 'Ticket validé avec succès.', result.data);
-        } else if (result.status === 'already_scanned') {
-          showScanResult('warning', '⚠️ Déjà scanné', `Ce ticket a déjà été scanné à ${result.data.scanned_at || 'une heure inconnue'}.`, result.data);
-        } else if (result.status === 'not_found') {
-          showScanResult('error', '❌ Ticket Introuvable', `Aucun inscrit trouvé avec ce ticket.`, null);
-        } else {
-          showScanResult('error', '❌ Erreur', result.message || 'Une erreur est survenue.', null);
-        }
+      let result;
+      try {
+        const resp = await fetch(`${GOOGLE_SCRIPT_URL}?action=scan&ticket_id=${encodeURIComponent(ticketId)}`);
+        result = await resp.json();
       } catch (err) {
-        showScanResult('error', '❌ Erreur de connexion', 'Impossible de contacter le serveur. Vérifiez votre connexion internet.', null);
+        result = { status: 'error', message: 'Impossible de contacter le serveur.' };
       }
-      document.getElementById('scanner-status').textContent = 'Scanner actif — présentez un QR code.';
-    }
 
-    function showScanResult(type, title, message, data) {
-      try {
-        const colors = { success: '#0d2b1a', error: '#2b0d0d', warning: '#2b1e0d' };
-        const borders = { success: '#4cc978', error: '#e74c3c', warning: '#e0a050' };
-        const bg = colors[type] || colors.error;
-        const border = borders[type] || borders.error;
+      const cfg = {
+        success:        { bg: '#0d2b1a', border: '#4cc978', icon: '✅', title: 'Bienvenue !' },
+        already_scanned:{ bg: '#2b1e0d', border: '#e0a050', icon: '⚠️', title: 'Déjà scanné' },
+        not_found:      { bg: '#2b0d0d', border: '#e74c3c', icon: '❌', title: 'Ticket introuvable' },
+        error:          { bg: '#2b0d0d', border: '#e74c3c', icon: '❌', title: 'Erreur' }
+      };
+      const c = cfg[result.status] || cfg.error;
+      const d = result.data || {};
+      const details = result.data ? `
+        <div style="margin:1rem 0;text-align:left;font-size:0.95rem;">
+          <div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.15);"><b>Nom</b><span>${d.full_name||'—'}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.15);"><b>Téléphone</b><span>${d.phone||'—'}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.15);"><b>Église</b><span>${d.church||'—'}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:0.5rem 0;"><b>Ticket</b><span style="font-family:monospace;">${d.ticket_id||'—'}</span></div>
+        </div>` : `<p style="color:rgba(255,255,255,0.7);margin:0.75rem 0;">${result.message||''}</p>`;
 
-        let details = '';
-        if (data) {
-          details = `
-            <div style="margin:1rem 0;text-align:left;">
-              <div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.1)"><span style="color:rgba(255,255,255,0.5);font-size:0.8rem;">NOM</span><span>${data.full_name || '—'}</span></div>
-              <div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.1)"><span style="color:rgba(255,255,255,0.5);font-size:0.8rem;">TÉLÉPHONE</span><span>${data.phone || '—'}</span></div>
-              <div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.1)"><span style="color:rgba(255,255,255,0.5);font-size:0.8rem;">ÉGLISE</span><span>${data.church || '—'}</span></div>
-              <div style="display:flex;justify-content:space-between;padding:0.4rem 0;"><span style="color:rgba(255,255,255,0.5);font-size:0.8rem;">TICKET</span><span style="font-family:monospace;font-size:0.85rem;">${data.ticket_id || '—'}</span></div>
-            </div>`;
-        }
-
-        const msgHtml = message ? `<p style="color:rgba(255,255,255,0.7);font-size:0.9rem;margin:0.5rem 0;">${message}</p>` : '';
-
-        const html = `
-          <div style="background:${bg};border:2px solid ${border};border-radius:16px;padding:2rem;width:100%;max-width:420px;text-align:center;color:#fff;">
-            <div style="font-size:3.5rem;margin-bottom:0.5rem;">${type === 'success' ? '✅' : type === 'warning' ? '⚠️' : '❌'}</div>
-            <h3 style="font-size:1.5rem;margin-bottom:0.5rem;color:${border};">${title}</h3>
-            ${msgHtml}
-            ${details}
-            <button onclick="closeScanOverlay()" style="margin-top:1rem;padding:0.6rem 2rem;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:8px;cursor:pointer;font-size:1rem;width:100%;">Fermer</button>
-          </div>`;
-
-        const overlay = document.getElementById('scan-overlay');
-        overlay.style.position = 'fixed';
-        overlay.style.top = '0';
-        overlay.style.left = '0';
-        overlay.style.right = '0';
-        overlay.style.bottom = '0';
-        overlay.style.zIndex = '9999';
-        overlay.style.background = 'rgba(0,0,0,0.9)';
-        overlay.style.alignItems = 'center';
-        overlay.style.justifyContent = 'center';
-        overlay.style.padding = '1rem';
-        document.getElementById('scan-result').innerHTML = html;
-        overlay.style.display = 'flex';
-
-        if (type === 'success' || type === 'warning') {
-          setTimeout(() => closeScanOverlay(), 6000);
-        }
-      } catch(e) {
-        // Fallback absolu si tout échoue
-        alert(title + (message ? '\n' + message : '') + (data ? '\n' + (data.full_name || '') : ''));
-      }
-      document.getElementById('scanner-status').textContent = 'Scanner actif — présentez un QR code.';
-    }
-
-    function closeScanOverlay() {
-      document.getElementById('scan-overlay').style.display = 'none';
-      document.getElementById('scan-result').innerHTML = '';
+      document.getElementById('state-result').innerHTML = `
+        <div style="background:${c.bg};border:2px solid ${c.border};border-radius:16px;padding:2rem;color:#fff;text-align:center;">
+          <div style="font-size:4rem;">${c.icon}</div>
+          <h2 style="color:${c.border};margin:0.5rem 0;font-family:var(--font-display);">${c.title}</h2>
+          ${details}
+          <button onclick="showState('ready')" style="margin-top:1.5rem;padding:0.8rem;width:100%;background:${c.border};border:none;border-radius:8px;color:#000;font-weight:700;font-size:1rem;cursor:pointer;">
+            Scanner suivant
+          </button>
+        </div>`;
     }
 
     // =============================================
