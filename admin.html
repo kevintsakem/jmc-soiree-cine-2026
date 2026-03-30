@@ -315,54 +315,81 @@
     }
 
     /* Scan result overlay */
+    /* Overlay plein écran pour résultat scan */
+    #scan-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 3000;
+      background: rgba(0,0,0,0.85);
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    #scan-overlay.visible { display: flex; }
+
     .scan-result {
       padding: 2rem;
-      border-radius: 2px;
-      margin: 1.5rem auto;
-      max-width: 450px;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 420px;
+      text-align: center;
       animation: fadeIn 0.3s ease;
+      position: relative;
     }
 
     .scan-result.success {
-      background: var(--green-dim);
-      border: 1px solid rgba(76,201,120,0.3);
+      background: #0d2b1a;
+      border: 2px solid rgba(76,201,120,0.6);
     }
 
     .scan-result.error {
-      background: var(--red-dim);
-      border: 1px solid rgba(201,76,76,0.3);
+      background: #2b0d0d;
+      border: 2px solid rgba(201,76,76,0.6);
     }
 
     .scan-result.warning {
-      background: var(--orange-dim);
-      border: 1px solid rgba(201,150,76,0.3);
+      background: #2b1e0d;
+      border: 2px solid rgba(201,150,76,0.6);
     }
 
     .scan-result-icon {
-      font-size: 3rem;
-      margin-bottom: 0.5rem;
+      font-size: 4rem;
+      margin-bottom: 0.75rem;
     }
 
     .scan-result h3 {
       font-family: var(--font-display);
-      font-size: 1.3rem;
-      margin-bottom: 0.5rem;
+      font-size: 1.6rem;
+      margin-bottom: 0.75rem;
     }
 
-    .scan-result.success h3 { color: var(--green); }
+    .scan-result.success h3 { color: #4cc978; }
     .scan-result.error h3 { color: var(--red); }
-    .scan-result.warning h3 { color: var(--orange); }
+    .scan-result.warning h3 { color: #e0a050; }
 
     .scan-result p {
       color: var(--white-70);
+      font-size: 0.95rem;
+    }
+
+    .scan-close-btn {
+      margin-top: 1.5rem;
+      padding: 0.6rem 2rem;
+      background: var(--white-10);
+      border: 1px solid var(--white-20);
+      color: var(--white-90);
+      border-radius: 8px;
+      cursor: pointer;
       font-size: 0.9rem;
     }
 
     .scan-result .detail-line {
       display: flex;
       justify-content: space-between;
-      padding: 0.3rem 0;
+      padding: 0.4rem 0;
       border-bottom: 1px solid var(--white-10);
+      text-align: left;
     }
 
     .scan-result .detail-label {
@@ -616,8 +643,6 @@
         <div id="scanner-view"></div>
         <p id="scanner-status">Le scanner est prêt.</p>
 
-        <!-- Scan Result -->
-        <div id="scan-result"></div>
 
         <!-- Manual Input -->
         <div class="manual-scan">
@@ -679,6 +704,11 @@
         </table>
       </div>
     </div>
+  </div>
+
+  <!-- OVERLAY — Résultat du scan -->
+  <div id="scan-overlay">
+    <div id="scan-result"></div>
   </div>
 
   <!-- MODAL — Ajouter manuellement -->
@@ -857,7 +887,7 @@
     async function processTicketScan(ticketId, name, phone) {
       try {
         const controller1 = new AbortController();
-        const timeout1 = setTimeout(() => controller1.abort(), 5000);
+        const timeout1 = setTimeout(() => controller1.abort(), 20000);
         const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=scan&ticket_id=${encodeURIComponent(ticketId)}`, { signal: controller1.signal });
         clearTimeout(timeout1);
         const result = await response.json();
@@ -900,9 +930,22 @@
         html += `<p style="margin-top:0.8rem;">${message}</p>`;
       }
 
+      html += `<button class="scan-close-btn" onclick="closeScanOverlay()">Fermer</button>`;
       html += '</div>';
+
       document.getElementById('scan-result').innerHTML = html;
+      document.getElementById('scan-overlay').classList.add('visible');
+
+      // Fermeture automatique après 6 secondes pour succès/déjà scanné
+      if (type === 'success' || type === 'warning') {
+        setTimeout(() => closeScanOverlay(), 6000);
+      }
       document.getElementById('scanner-status').textContent = 'Scanner actif — présentez un QR code.';
+    }
+
+    function closeScanOverlay() {
+      document.getElementById('scan-overlay').classList.remove('visible');
+      document.getElementById('scan-result').innerHTML = '';
     }
 
     // =============================================
