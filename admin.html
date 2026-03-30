@@ -317,16 +317,15 @@
     /* Scan result overlay */
     /* Overlay plein écran pour résultat scan */
     #scan-overlay {
-      display: none;
       position: fixed;
-      inset: 0;
+      top: 0; left: 0; right: 0; bottom: 0;
       z-index: 3000;
       background: rgba(0,0,0,0.85);
+      display: none;
       align-items: center;
       justify-content: center;
       padding: 1rem;
     }
-    #scan-overlay.visible { display: flex; }
 
     .scan-result {
       padding: 2rem;
@@ -933,8 +932,9 @@
       html += `<button class="scan-close-btn" onclick="closeScanOverlay()">Fermer</button>`;
       html += '</div>';
 
+      const overlay = document.getElementById('scan-overlay');
       document.getElementById('scan-result').innerHTML = html;
-      document.getElementById('scan-overlay').classList.add('visible');
+      overlay.style.display = 'flex';
 
       // Fermeture automatique après 6 secondes pour succès/déjà scanné
       if (type === 'success' || type === 'warning') {
@@ -944,7 +944,7 @@
     }
 
     function closeScanOverlay() {
-      document.getElementById('scan-overlay').classList.remove('visible');
+      document.getElementById('scan-overlay').style.display = 'none';
       document.getElementById('scan-result').innerHTML = '';
     }
 
