@@ -31,7 +31,7 @@ async function initDB() {
 }
 initDB().catch(console.error);
 
-app.get('/', async (req, res) => {
+app.get(['/', '/api'], async (req, res) => {
   const action = (req.query.action || '').toLowerCase();
   try {
     if (action === 'register')    return await handleRegister(req.query, res);
