@@ -45,9 +45,18 @@ app.get(['/', '/api'], async (req, res) => {
   }
 });
 
+const MAX_PLACES = 100;
+
 async function handleRegister(params, res) {
   const timestamp = params.timestamp ||
     new Date().toLocaleString('fr-FR', { timeZone: 'Africa/Douala' });
+
+  // Vérifier la capacité
+  const { rows: countRows } = await pool.query('SELECT COUNT(*) FROM inscriptions');
+  if (parseInt(countRows[0].count) >= MAX_PLACES) {
+    return res.json({ status: 'full', message: 'Désolé, toutes les places sont prises !' });
+  }
+
   try {
     await pool.query(
       `INSERT INTO inscriptions (timestamp,full_name,gender,phone,church,email,ticket_id,scan_status,scan_time)

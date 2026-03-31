@@ -812,7 +812,7 @@
       <span class="line2">Cinéma</span>
     </h1>
     <div class="hero-divider"></div>
-    <p class="hero-info"><strong>12 Avril 2026</strong> &nbsp;·&nbsp; 15h00</p>
+    <p class="hero-info"><strong>12 Avril 2026</strong> &nbsp;·&nbsp; 15h30</p>
     <p class="hero-venue">Salle de l'Auditorium</p>
     <span class="hero-free">Entrée Libre</span>
     <div class="hero-cta">
@@ -835,27 +835,27 @@
 
     <div class="timeline">
       <div class="timeline-item reveal">
-        <div class="timeline-time">15h00</div>
+        <div class="timeline-time">15h30</div>
         <div class="timeline-title">Accueil & Installation</div>
         <div class="timeline-desc">Arrivée des invités, installation dans la salle et ambiance musicale.</div>
       </div>
       <div class="timeline-item reveal">
-        <div class="timeline-time">15h30</div>
+        <div class="timeline-time">16h00</div>
         <div class="timeline-title">Mot de Bienvenue</div>
         <div class="timeline-desc">Ouverture officielle de la soirée cinéma par les responsables JMC.</div>
       </div>
       <div class="timeline-item reveal">
-        <div class="timeline-time">15h45</div>
+        <div class="timeline-time">16h15</div>
         <div class="timeline-title">Projection du Film</div>
         <div class="timeline-desc">Diffusion du film sélectionné — un moment de partage et de réflexion.</div>
       </div>
       <div class="timeline-item reveal">
-        <div class="timeline-time">17h30</div>
+        <div class="timeline-time">18h00</div>
         <div class="timeline-title">Discussion & Échanges</div>
         <div class="timeline-desc">Débat ouvert sur les thèmes du film, partage d'impressions et de réflexions.</div>
       </div>
       <div class="timeline-item reveal">
-        <div class="timeline-time">18h00</div>
+        <div class="timeline-time">18h30</div>
         <div class="timeline-title">Collation & Clôture</div>
         <div class="timeline-desc">Moment convivial autour d'une collation, photos et clôture de la soirée.</div>
       </div>
@@ -896,6 +896,7 @@
           <label for="email">Email <span style="color:var(--white-50); font-size:0.7rem; text-transform:none; letter-spacing:0;">(optionnel)</span></label>
           <input type="email" id="email" name="email" placeholder="Ex: aureliembarga@gmail.com">
         </div>
+        <div id="places-restantes" style="text-align:center;margin-bottom:0.8rem;font-size:0.9rem;color:var(--gold-light);"></div>
         <button type="submit" class="btn-gold btn-full" id="submitBtn">Réserver ma Place</button>
         <div id="form-status"></div>
       </form>
@@ -905,7 +906,7 @@
     <div id="confirmation">
       <div class="ticket-card" id="ticket-card">
         <div class="ticket-header">JMC — SOIRÉE CINÉMA</div>
-        <div class="ticket-subtitle">12 Avril 2026 · 15h00</div>
+        <div class="ticket-subtitle">12 Avril 2026 · 15h30</div>
         <div class="ticket-qr">
           <canvas id="qrcodeCanvas"></canvas>
         </div>
@@ -958,7 +959,7 @@
     // COUNTDOWN
     // =============================================
     function updateCountdown() {
-      const target = new Date('2026-04-12T15:00:00+01:00'); // WAT (Cameroon)
+      const target = new Date('2026-04-12T15:30:00+01:00'); // WAT (Cameroon)
       const now = new Date();
       const diff = target - now;
 
@@ -999,6 +1000,29 @@
 
     updateCountdown();
     setInterval(updateCountdown, 1000);
+
+    // =============================================
+    // VÉRIFICATION PLACES RESTANTES
+    // =============================================
+    async function checkCapacity() {
+      try {
+        const r = await fetch('/api?action=list');
+        const data = await r.json();
+        if (data.status === 'success') {
+          const taken = data.data.length;
+          const remaining = 100 - taken;
+          const el = document.getElementById('places-restantes');
+          if (remaining <= 0) {
+            el.innerHTML = '<strong style="color:#c94c4c;">Complet — Plus de places disponibles</strong>';
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('submitBtn').textContent = 'Complet';
+          } else {
+            el.textContent = `${remaining} place${remaining > 1 ? 's' : ''} restante${remaining > 1 ? 's' : ''} sur 100`;
+          }
+        }
+      } catch(e) { /* silencieux */ }
+    }
+    checkCapacity();
 
     // =============================================
     // SCROLL REVEAL
@@ -1084,12 +1108,19 @@
           const response = await fetch(url, { signal: controller.signal });
           clearTimeout(timeout);
           const result = await response.json();
-          console.log('Sheet response:', result);
+          console.log('API response:', result);
+          if (result.status === 'full') {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Réserver ma Place';
+            showStatus('Désolé, toutes les 100 places sont prises !', 'error');
+            document.getElementById('places-restantes').innerHTML = '<strong style="color:#c94c4c;">Complet — Plus de places disponibles</strong>';
+            return;
+          }
         } catch (err) {
-          console.warn('Google Sheets envoi échoué (timeout ou réseau):', err);
+          console.warn('Envoi API échoué (timeout ou réseau):', err);
         }
 
-        // ✅ ALWAYS generate the QR code and ticket, regardless of sheet status
+        // ✅ Générer le QR code et le ticket
         showTicket(formData);
 
       } catch (err) {
