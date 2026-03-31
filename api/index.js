@@ -12,7 +12,7 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-// Crée la table si absente
+// Crée les tables si absentes
 async function initDB() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS inscriptions (
@@ -28,32 +28,64 @@ async function initDB() {
       scan_time   TEXT DEFAULT ''
     )
   `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS settings (
+      key   TEXT PRIMARY KEY,
+      value TEXT
+    )
+  `);
+  await pool.query(`
+    INSERT INTO settings (key, value) VALUES ('max_places', '100')
+    ON CONFLICT (key) DO NOTHING
+  `);
 }
 initDB().catch(console.error);
 
 app.get(['/', '/api'], async (req, res) => {
   const action = (req.query.action || '').toLowerCase();
   try {
-    if (action === 'register')    return await handleRegister(req.query, res);
-    if (action === 'scan')        return await handleScan(req.query.ticket_id, res);
-    if (action === 'list')        return await handleList(res);
-    if (action === 'delete')      return await handleDelete(req.query.ticket_id, res);
-    if (action === 'export')      return await handleExport(res);
+    if (action === 'register')     return await handleRegister(req.query, res);
+    if (action === 'scan')         return await handleScan(req.query.ticket_id, res);
+    if (action === 'list')         return await handleList(res);
+    if (action === 'delete')       return await handleDelete(req.query.ticket_id, res);
+    if (action === 'deletemany')   return await handleDeleteMany(req.query.ticket_ids, res);
+    if (action === 'export')       return await handleExport(res);
+    if (action === 'getcapacity')  return await handleGetCapacity(res);
+    if (action === 'setcapacity')  return await handleSetCapacity(req.query.value, res);
     return res.json({ status: 'ok', message: 'JMC Soirée Cinéma API v3' });
   } catch (err) {
     return res.json({ status: 'error', message: err.toString() });
   }
 });
 
-const MAX_PLACES = 100;
+async function getMaxPlaces() {
+  const { rows } = await pool.query("SELECT value FROM settings WHERE key='max_places'");
+  return rows.length ? parseInt(rows[0].value) : 100;
+}
+
+async function handleGetCapacity(res) {
+  const max = await getMaxPlaces();
+  const { rows } = await pool.query('SELECT COUNT(*) FROM inscriptions');
+  return res.json({ status: 'success', max_places: max, current: parseInt(rows[0].count) });
+}
+
+async function handleSetCapacity(value, res) {
+  const n = parseInt(value);
+  if (!value || isNaN(n) || n < 1) {
+    return res.json({ status: 'error', message: 'Valeur invalide.' });
+  }
+  await pool.query("UPDATE settings SET value=$1 WHERE key='max_places'", [String(n)]);
+  return res.json({ status: 'success', message: `Capacité mise à jour : ${n} places.`, max_places: n });
+}
 
 async function handleRegister(params, res) {
   const timestamp = params.timestamp ||
     new Date().toLocaleString('fr-FR', { timeZone: 'Africa/Douala' });
 
-  // Vérifier la capacité
+  // Vérifier la capacité (lue depuis la base)
+  const maxPlaces = await getMaxPlaces();
   const { rows: countRows } = await pool.query('SELECT COUNT(*) FROM inscriptions');
-  if (parseInt(countRows[0].count) >= MAX_PLACES) {
+  if (parseInt(countRows[0].count) >= maxPlaces) {
     return res.json({ status: 'full', message: 'Désolé, toutes les places sont prises !' });
   }
 
@@ -106,6 +138,16 @@ async function handleDelete(ticketId, res) {
   const result = await pool.query('DELETE FROM inscriptions WHERE ticket_id=$1', [ticketId]);
   if (result.rowCount === 0) return res.json({ status:'error', message:'Ticket introuvable.' });
   return res.json({ status:'success', message:'Inscription supprimée.' });
+}
+
+async function handleDeleteMany(ticketIds, res) {
+  if (!ticketIds) return res.json({ status:'error', message:'ticket_ids manquant' });
+  const ids = ticketIds.split(',').map(s => s.trim()).filter(Boolean);
+  if (ids.length === 0) return res.json({ status:'error', message:'Aucun ticket fourni.' });
+  const result = await pool.query(
+    'DELETE FROM inscriptions WHERE ticket_id = ANY($1::text[])', [ids]
+  );
+  return res.json({ status:'success', message:`${result.rowCount} inscription(s) supprimée(s).`, deleted: result.rowCount });
 }
 
 async function handleExport(res) {

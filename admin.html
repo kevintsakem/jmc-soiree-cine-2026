@@ -675,6 +675,14 @@
           <div class="stat-number" id="stat-pending">—</div>
           <div class="stat-label">En attente</div>
         </div>
+        <div class="stat-card" style="min-width:180px;">
+          <div style="display:flex;align-items:center;gap:0.5rem;justify-content:center;">
+            <input type="number" id="capacity-input" min="1" max="9999" value="100"
+              style="width:70px;padding:0.3rem 0.5rem;background:rgba(255,255,255,0.05);border:1px solid var(--white-20);border-radius:4px;color:var(--gold);font-size:1.3rem;font-weight:700;text-align:center;">
+            <button onclick="saveCapacity()" style="padding:0.3rem 0.6rem;background:transparent;border:1px solid var(--gold-dim);color:var(--gold);border-radius:4px;cursor:pointer;font-size:0.8rem;">✔</button>
+          </div>
+          <div class="stat-label">Capacité Max</div>
+        </div>
       </div>
 
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1rem;">
@@ -684,6 +692,10 @@
         <button class="btn-outline" onclick="loadGuestList()"><span id="refresh-icon">↻</span> Rafraîchir</button>
         <button class="btn-gold" onclick="openAddModal()">+ Ajouter manuellement</button>
         <a class="btn-outline" href="/api?action=export" download style="text-decoration:none;">⬇ Exporter Excel</a>
+        <button id="delete-selection-btn" onclick="deleteSelected()"
+          style="display:none;padding:0.6rem 1rem;background:transparent;border:1px solid #e74c3c;color:#e74c3c;border-radius:4px;cursor:pointer;font-size:0.9rem;">
+          🗑 Supprimer la sélection (<span id="selection-count">0</span>)
+        </button>
         <div style="display:flex;align-items:center;gap:0.5rem;">
           <input type="number" id="gen-count" min="1" max="100" value="10"
             style="width:70px;padding:0.6rem 0.7rem;background:rgba(255,255,255,0.05);border:1px solid var(--white-20);border-radius:2px;color:var(--white-90);font-size:0.9rem;text-align:center;">
@@ -699,6 +711,7 @@
         <table class="guest-table">
           <thead>
             <tr>
+              <th><input type="checkbox" id="select-all" onchange="toggleSelectAll(this.checked)" title="Tout sélectionner"></th>
               <th>#</th>
               <th>Nom</th>
               <th>Sexe</th>
@@ -788,6 +801,7 @@
     function showDashboard() {
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('admin-dashboard').style.display = 'block';
+      loadCapacity();
       loadGuestList();
     }
 
@@ -948,12 +962,13 @@
       const tbody = document.getElementById('guest-table-body');
 
       if (guests.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--white-50);padding:2rem;">Aucun inscrit trouvé.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--white-50);padding:2rem;">Aucun inscrit trouvé.</td></tr>';
         return;
       }
 
       tbody.innerHTML = guests.map((g, i) => `
         <tr>
+          <td><input type="checkbox" class="row-checkbox" value="${g.ticket_id}" onchange="updateSelectionUI()"></td>
           <td>${i + 1}</td>
           <td style="color:var(--cream);font-weight:500;">${g.full_name || '—'}</td>
           <td>${g.gender || '—'}</td>
@@ -967,10 +982,14 @@
             </span>
           </td>
           <td>
-            <button onclick="deleteGuest('${g.ticket_id}')" style="background:transparent;border:1px solid #e74c3c;color:#e74c3c;padding:0.3rem 0.7rem;border-radius:6px;cursor:pointer;font-size:0.8rem;">🗑 Supprimer</button>
+            <button onclick="deleteGuest('${g.ticket_id}')" style="background:transparent;border:1px solid #e74c3c;color:#e74c3c;padding:0.3rem 0.7rem;border-radius:6px;cursor:pointer;font-size:0.8rem;">🗑</button>
           </td>
         </tr>
       `).join('');
+      // Reset select-all checkbox
+      const selectAll = document.getElementById('select-all');
+      if (selectAll) selectAll.checked = false;
+      updateSelectionUI();
     }
 
     function updateStats(guests) {
@@ -1058,6 +1077,69 @@
       btn.textContent = '⚡ Générer';
       alert(`✅ ${ok} inscrits générés${fail ? ` — ${fail} échec(s)` : ''}.`);
       loadGuestList();
+    }
+
+    // =============================================
+    // CAPACITÉ MAXIMALE
+    // =============================================
+    async function loadCapacity() {
+      try {
+        const res = await fetch(`${GOOGLE_SCRIPT_URL}?action=getcapacity`);
+        const data = await res.json();
+        if (data.status === 'success') {
+          document.getElementById('capacity-input').value = data.max_places;
+        }
+      } catch (_) {}
+    }
+
+    async function saveCapacity() {
+      const val = document.getElementById('capacity-input').value;
+      if (!val || parseInt(val) < 1) { alert('Entrez une valeur valide.'); return; }
+      try {
+        const res = await fetch(`${GOOGLE_SCRIPT_URL}?action=setcapacity&value=${encodeURIComponent(val)}`);
+        const data = await res.json();
+        if (data.status === 'success') {
+          alert(`✅ Capacité mise à jour : ${data.max_places} places.`);
+        } else {
+          alert('Erreur : ' + data.message);
+        }
+      } catch (_) { alert('Erreur de connexion.'); }
+    }
+
+    // =============================================
+    // SÉLECTION EN MASSE
+    // =============================================
+    function toggleSelectAll(checked) {
+      document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = checked);
+      updateSelectionUI();
+    }
+
+    function updateSelectionUI() {
+      const checked = document.querySelectorAll('.row-checkbox:checked');
+      const btn = document.getElementById('delete-selection-btn');
+      const countEl = document.getElementById('selection-count');
+      if (checked.length > 0) {
+        btn.style.display = 'inline-block';
+        countEl.textContent = checked.length;
+      } else {
+        btn.style.display = 'none';
+      }
+    }
+
+    async function deleteSelected() {
+      const checked = document.querySelectorAll('.row-checkbox:checked');
+      if (checked.length === 0) return;
+      if (!confirm(`Supprimer ${checked.length} inscription(s) sélectionnée(s) ?`)) return;
+      const ids = Array.from(checked).map(cb => cb.value).join(',');
+      try {
+        const res = await fetch(`${GOOGLE_SCRIPT_URL}?action=deletemany&ticket_ids=${encodeURIComponent(ids)}`);
+        const data = await res.json();
+        if (data.status === 'success') {
+          await loadGuestList();
+        } else {
+          alert('Erreur : ' + data.message);
+        }
+      } catch (_) { alert('Erreur de connexion.'); }
     }
 
     // =============================================
