@@ -803,9 +803,10 @@
     // =============================================
     // QR SCANNER — jsQR + getUserMedia
     // =============================================
-    let scanStream = null;
-    let scanLoop = null;
+    let scanStream  = null;
+    let scanTimer   = null;
     let lastScanned = null;
+    let isProcessing = false;
 
     function showState(name) {
       document.getElementById('state-ready').style.display    = name === 'ready'    ? 'block' : 'none';
@@ -817,56 +818,52 @@
       showState('scanning');
       try {
         scanStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: 'environment' } }
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
         });
         const video = document.getElementById('scan-video');
-        video.srcObject = scanStream;
         video.setAttribute('playsinline', '');
-        video.play().catch(() => {});
-        // Attendre que la vidéo soit prête avant de scanner
-        waitAndScan(video);
+        video.setAttribute('autoplay', '');
+        video.srcObject = scanStream;
+        try { await video.play(); } catch(e) {}
+        // Démarrer la boucle de scan toutes les 250ms
+        scanTimer = setInterval(scanFrame, 250);
       } catch (err) {
         alert('Caméra inaccessible : ' + (err.message || err));
         showState('ready');
       }
     }
 
-    function waitAndScan(video) {
-      if (video.readyState >= 2 && video.videoWidth > 0) {
-        scanLoop = requestAnimationFrame(scanFrames);
-      } else {
-        setTimeout(() => waitAndScan(video), 200);
-      }
-    }
-
     function stopScanner() {
-      if (scanLoop) { cancelAnimationFrame(scanLoop); scanLoop = null; }
+      if (scanTimer)  { clearInterval(scanTimer); scanTimer = null; }
       if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+      isProcessing = false;
       showState('ready');
     }
 
-    function scanFrames() {
-      if (!scanStream) return;
-      const video  = document.getElementById('scan-video');
-      const canvas = document.getElementById('scan-canvas');
+    function scanFrame() {
+      if (!scanStream || isProcessing) return;
+      const video = document.getElementById('scan-video');
+      if (!video || video.readyState < 2 || video.videoWidth === 0) return;
 
-      // Réduire la résolution pour accélérer jsQR sur mobile
-      const scale = Math.min(1, 640 / video.videoWidth);
-      canvas.width  = Math.round(video.videoWidth  * scale);
-      canvas.height = Math.round(video.videoHeight * scale);
+      const canvas = document.getElementById('scan-canvas');
+      const w = Math.min(video.videoWidth, 640);
+      const h = Math.round(video.videoHeight * (w / video.videoWidth));
+      canvas.width  = w;
+      canvas.height = h;
+
       const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(video, 0, 0, w, h);
+      const img  = ctx.getImageData(0, 0, w, h);
       const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'attemptBoth' });
 
       if (code && code.data && code.data !== lastScanned) {
-        lastScanned = code.data;
-        setTimeout(() => { lastScanned = null; }, 5000);
-        stopScanner();
+        lastScanned  = code.data;
+        isProcessing = true;
+        clearInterval(scanTimer); scanTimer = null;
+        if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+        setTimeout(() => { lastScanned = null; }, 8000);
         handleQRCode(code.data);
-        return;
       }
-      scanLoop = requestAnimationFrame(scanFrames);
     }
 
     function handleQRCode(raw) {
@@ -929,7 +926,7 @@
           <div style="font-size:4rem;">${c.icon}</div>
           <h2 style="color:${c.border};margin:0.5rem 0;font-family:var(--font-display);">${c.title}</h2>
           ${details}
-          <button onclick="showState('ready')" style="margin-top:1.5rem;padding:0.8rem;width:100%;background:${c.border};border:none;border-radius:8px;color:#000;font-weight:700;font-size:1rem;cursor:pointer;">
+          <button onclick="isProcessing=false;showState('ready')" style="margin-top:1.5rem;padding:0.8rem;width:100%;background:${c.border};border:none;border-radius:8px;color:#000;font-weight:700;font-size:1rem;cursor:pointer;">
             Scanner suivant
           </button>
         </div>`;
